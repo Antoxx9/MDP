@@ -72,11 +72,11 @@ public:
 	}
 
 	// Method to calculate the cost of exchanging 2 elements in the current solution set.
-	double exchange(vector<int> &set, int new, int old){
+	double exchange(vector<int> &set, int new_s, int old_s){
 		double resp = 0;
 		for(int i = 0; i < (int)set.size(); i++){
-			if(set[i] == 1 && i != old){
-				resp += (euclidean_distance(matrix[i], matrix[new]) - euclidean_distance(matrix[i], matrix[old]));
+			if(set[i] == 1 && i != old_s){
+				resp += (euclidean_distance(matrix[i], matrix[new_s]) - euclidean_distance(matrix[i], matrix[old_s]));
 			}
 		}
 		return resp;
