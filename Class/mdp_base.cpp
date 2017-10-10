@@ -17,6 +17,7 @@
 
 #define ff first
 #define ss second
+#define INF 1000000000
 
 using namespace std;
 
@@ -26,28 +27,14 @@ class mdp_base {
 public:
 
 	vector< vector<double> > matrix;
-	//set< vector< double > > search_space;
+	vector<int> search_space;
 	vector<int> partial_sol;
 	vector<int> best_sol;
 	int rows, m_set;
+	double best_value;
 
 	mdp_base(){};
 
-
-	// Method to get de center of a set
-	double center_s(vector<int> &set){
-		double resp = 0;
-		int size = 0;
-		for(int i = 0; i < (int)set.size(); i++){
-			if(set[i] == 1){
-				for(int j = 0; j < (int)matrix[i].size(); j++){
-					resp += matrix[i][j];
-				}
-				size++;
-			}
-		}
-		return resp/size;
-	}
 
 	// Method to calculate the euclidean distance between 2 vectors.
 	double euclidean_distance(vector< double > &si, vector< double > &sj){
@@ -82,6 +69,117 @@ public:
 		return resp;
 	}
 
+	// Method to calculate the distance between a si and a set X
+	double distance_X(vector<double> &si, vector<int> &X){
+		double distance = 0;
+		for(int j = 0; j < X.size(); j++){
+			if(X[j] == 1){
+				distance += euclidean_distance(si, matrix[j]);
+			}
+		}
+		return distance;
+	}
+
+	// Destructive Method D2 to find an initial solution.
+	vector<int> destructive_2(){
+		vector<int> initial_sol = search_space;
+		int selected = rows;
+		double min_dist, aux;
+		int min_index;
+		while(selected > m_set){
+			min_dist = INF;
+			min_index = -1;
+			for(int i = 0; i < (int)initial_sol.size(); i++){
+				if(initial_sol[i] == 1){
+					aux = distance_X(matrix[i], initial_sol);
+				}
+				else{
+					aux = INF;
+				}
+				if(aux < min_dist){
+					min_index = i;
+					min_dist = aux;
+				}
+			}
+			initial_sol[min_index] = 0;
+			selected--;
+		}
+		return initial_sol;
+	}
+
+	// Method to get a random initial solution.
+	vector<int> random_sol(){
+		vector<int> initial_sol;
+		initial_sol.resize(rows);
+		int size = 0;
+		int random;
+		srand(time(NULL));
+		while(size < m_set){
+			random = rand()%rows;
+			if(initial_sol[random] == 0){
+				size++;
+				initial_sol[random] = 1;
+				search_space[random] = 0;
+			}
+		}
+		return initial_sol;
+	}
+
+	// Method to calculate the value of a solution
+	double sol_value(vector<int> & sol){
+		double value = 0;
+		for(int i = 0; i < rows-1; i++){
+			if(sol[i] == 1){
+				for(int j = i+1; j < rows; j++){
+					if(sol[j] == 1){
+						value += euclidean_distance(matrix[i], matrix[j]);
+					}
+				}
+			}
+		}
+		return value;
+	}
+
+	void local_search_first_best(){
+		printf("Local search\n");
+		partial_sol.resize(rows);
+		best_sol.resize(rows);
+		double new_value; 
+		int no_changes = 0;
+		int size = 0;
+		best_sol = random_sol();
+		for(int i = 0; i < rows; i++){
+			if(best_sol[i] == 1){
+				printf("%d ",i);
+			}
+		}
+		printf("\n");
+		best_value = sol_value(best_sol);
+		printf("First value = %f\n",best_value);
+		while(no_changes < 500){
+			new_value = 0;
+			for(int i = 0; i < rows; i++){
+				if(best_sol[i] == 0){
+					for(int j = 0; j!= i && j < rows; j++){
+						if(best_sol[j] == 1){
+							new_value = best_value + exchange(best_sol, i, j);
+							if(new_value > best_value){
+								//printf("Change\n");
+								best_sol[j] = 0;
+								best_sol[i] = 1;
+								best_value = new_value;
+								no_changes = 0;
+								i = rows+1;
+								break;
+							}
+						}
+					}
+				}
+			}
+			no_changes++;
+		}
+	}
+
 	// Method to read a state and kepp it on the matrix, recieves the path of the txt file
 	void read_state(string path){
 		ifstream i_file;
@@ -94,11 +192,13 @@ public:
 		
 		i_file >> rows;
 		i_file >> m_set;
+		search_space.resize(rows);
 
 		matrix.resize(rows);
 		for(int i = 0; i < rows; i++){
 			lines += i;
 			matrix[i].resize(rows);
+			search_space[i] = 1;
 		}
 		for(int i = 0; i < lines; i++){
 			i_file >> x;
@@ -126,7 +226,16 @@ public:
 int main(){
 	mdp_base mdp;
 
-	string path = "../GKD-a/GKD-a_10_n10_m3.txt";
+	string path = "../SOM-b/SOM-b_1_n100_m10.txt";
 	mdp.read_state(path);
-	mdp.print_matrix();
+	printf("READED\n");
+	vector<int> test;
+	mdp.local_search_first_best();
+	for(int i = 0; i < mdp.rows; i++){
+		if(mdp.best_sol[i] == 1){
+			printf("%d ",i);
+		}
+	}
+	printf("\n");
+	printf("Best value = %f\n",mdp.best_value);
 }
