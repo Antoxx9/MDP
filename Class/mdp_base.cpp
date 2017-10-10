@@ -14,6 +14,7 @@
 #include <sstream>
 #include <time.h>
 #include <set>
+#include <limits.h>
 
 #define ff first
 #define ss second
@@ -28,10 +29,10 @@ public:
 
 	vector< vector<double> > distance_matrix;
 	vector<int> search_space;
-	vector<int> partial_sol;
+	vector<int> current_sol;
 	vector<int> best_sol;
-	int rows, m_set;
-	double best_value;
+	int rows, m_set, neighborhood_size;
+	double current_value, best_value;
 
 	mdp_base(){};
 
@@ -143,7 +144,7 @@ public:
 
 	void local_search_first_best(){
 		printf("Local search\n");
-		partial_sol.resize(rows);
+		current_sol.resize(rows);
 		best_sol.resize(rows);
 		double new_value; 
 		int no_changes = 0;
@@ -181,6 +182,40 @@ public:
 		}
 	}
 
+	void local_search(int iter) {
+		int no_changes = 0;	
+		while(no_changes < iter) {
+			current_sol = escogerSol()
+			if (current_value > best_value) {
+				best_sol = current_sol;
+				best_value = current_value;
+			}
+		}
+	}
+
+	void best_for_percentage(int percent){
+		int neighbors_visited = 0;
+		int num_neighbors = ceil((percent / 100) * neighborhood_size);
+		int best_exchange = INT_MIN;
+		int best_i = -1, best_j = -1;
+		int aux_exchange;
+		for (int i = 0; i < rows && neighbors_visited < num_neighbors; i++) {
+			if (current_sol[i] == 0) {
+				for (int j = 0; j < rows && neighbors_visited < num_neighbors; j++) {
+					if (current_sol[j] == 1) {
+						aux_exchange = exchange(current_sol, i, j);
+						if (aux_exchange > best_exchange) {
+							best_i = i;
+							best_j = j;
+							best_exchange = aux_exchange;
+						}
+						neighbors_visited++;
+					}
+				}
+			}
+		}
+	}
+
 	// Method to read a state and kepp it on the distance_matrix, recieves the path of the txt file
 	void read_state(string path){
 		ifstream i_file;
@@ -193,6 +228,7 @@ public:
 		
 		i_file >> rows;
 		i_file >> m_set;
+		neighborhood_size = m_set * (rows - m_set); 
 		search_space.resize(rows);
 
 		distance_matrix.resize(rows);
