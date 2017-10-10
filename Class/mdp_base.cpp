@@ -151,7 +151,8 @@ public:
 	void local_search(int flavor){
 		bool stop = false;
 		double new_value = 0; 
-		random_sol();
+		//random_sol();
+		destructive_2();
 
 		for(int i = 0; i < rows; i++){
 			if(best_sol[i] == 1){
@@ -166,14 +167,17 @@ public:
 				stop = !get_first_best();
 			}
 			else if (flavor == 2) {
-				stop = !best_for_percentage(50);
+				stop = !best_for_percentage(100);
 			}
 		}
 	}
 
 	bool best_for_percentage(int percent){
 		int neighbors_visited = 0;
-		int num_neighbors = ceil((percent / 100) * neighborhood_size);
+		//cout << neighbors_visited;
+		int num_neighbors = ceil((percent / 100.0) * neighborhood_size);
+		//cout << "Tamaño vecindad: " << neighborhood_size << endl;
+		cout << "Porcentaje vecindad: " << num_neighbors << endl;
 		int best_exchange = INT_MIN;
 		int best_i = -1, best_j = -1;
 		int aux_exchange;
@@ -193,11 +197,11 @@ public:
 			}
 		}
 		if (current_value + best_exchange > best_value) {
-			best_sol[best_i] = 1;
-			best_sol[best_j] = 0;
-			best_value = current_value + best_exchange;
-			current_sol = best_sol;
-			current_value = best_value;
+			current_sol[best_i] = 1;
+			current_sol[best_j] = 0;
+			current_value = current_value + best_exchange;
+			best_sol = current_sol;
+			best_value = current_value;
 			return true;
 		}
 		return false;
