@@ -132,14 +132,12 @@ public:
 				for(int j = 0; j < rows; j++){
 					if(current_sol[j] == 1){
 						new_value = current_value + exchange(current_sol, i, j);
-						if(new_value > current_value){
-							current_sol[j] = 0;
+						if (new_value > current_value){
 							current_sol[i] = 1;
+							current_sol[j] = 0;
 							current_value = new_value;
-
 							best_sol = current_sol;
 							best_value = current_value;
-
 							return true;
 						}
 					}
@@ -150,8 +148,8 @@ public:
 	}
 
 
-	void local_search_first_best(){
-
+	void local_search(int flavor){
+		bool stop = false;
 		double new_value = 0; 
 		random_sol();
 
@@ -163,25 +161,17 @@ public:
 		printf("\n");
 		printf("First value = %f\n",best_value);
 
-		while(true){
-			if(!get_first_best()){
-				return;
+		while(!stop){
+			if (flavor == 1) {
+				stop = !get_first_best();
+			}
+			else if (flavor == 2) {
+				stop = !best_for_percentage(50);
 			}
 		}
 	}
-/*
-	void local_search(int iter) {
-		int no_changes = 0;	
-		while(no_changes < iter) {
-			current_sol = escogerSol()
-			if (current_value > best_value) {
-				best_sol = current_sol;
-				best_value = current_value;
-			}
-		}
-	}
-*/
-	void best_for_percentage(int percent){
+
+	bool best_for_percentage(int percent){
 		int neighbors_visited = 0;
 		int num_neighbors = ceil((percent / 100) * neighborhood_size);
 		int best_exchange = INT_MIN;
@@ -202,6 +192,15 @@ public:
 				}
 			}
 		}
+		if (current_value + best_exchange > best_value) {
+			best_sol[best_i] = 1;
+			best_sol[best_j] = 0;
+			best_value = current_value + best_exchange;
+			current_sol = best_sol;
+			current_value = best_value;
+			return true;
+		}
+		return false;
 	}
 
 	// Method to read a state and kepp it on the distance_matrix, recieves the path of the txt file
@@ -250,13 +249,12 @@ public:
 
 int main(){
 	mdp_base mdp;
-
-	string path = "../SOM-b/SOM-b_1_n100_m10.txt";
+	string path = "../GKD-a/GKD-a_1_n10_m2.txt";
 	mdp.read_state(path);
 	printf("READED\n");
 	vector<int> test;
 	//mdp.print_matrix();
-	mdp.local_search_first_best();
+	mdp.local_search(2);
 	//mdp.destructive_2();
 	for(int i = 0; i < mdp.rows; i++){
 		if(mdp.best_sol[i] == 1){
