@@ -26,7 +26,7 @@ class mdp_base {
 
 public:
 
-	vector< vector<double> > matrix;
+	vector< vector<double> > distance_matrix;
 	vector<int> search_space;
 	vector<int> partial_sol;
 	vector<int> best_sol;
@@ -51,7 +51,7 @@ public:
 		double resp = 0;
 		for(int i = 0; i < (int)set.size(); i++){
 			if(set[i] == 1){
-				resp += euclidean_distance(matrix[i], matrix[index]);
+				resp += euclidean_distance(distance_matrix[i], distance_matrix[index]);
 			}
 		}
 		return resp;
@@ -62,18 +62,19 @@ public:
 		double resp = 0;
 		for(int i = 0; i < (int)set.size(); i++){
 			if(set[i] == 1 && i != old_s){
-				resp += (euclidean_distance(matrix[i], matrix[new_s]) - euclidean_distance(matrix[i], matrix[old_s]));
+				resp += (distance_matrix[i][new_s] - distance_matrix[i][old_s]);
 			}
 		}
 		return resp;
 	}
 
+/*
 	// Method to calculate the distance between a si and a set X
 	double distance_X(vector<double> &si, vector<int> &X){
 		double distance = 0;
 		for(int j = 0; j < X.size(); j++){
 			if(X[j] == 1){
-				distance += euclidean_distance(si, matrix[j]);
+				distance += euclidean_distance(si, distance_matrix[j]);
 			}
 		}
 		return distance;
@@ -90,7 +91,7 @@ public:
 			min_index = -1;
 			for(int i = 0; i < (int)initial_sol.size(); i++){
 				if(initial_sol[i] == 1){
-					aux = distance_X(matrix[i], initial_sol);
+					aux = distance_X(distance_matrix[i], initial_sol);
 				}
 				else{
 					aux = INF;
@@ -105,6 +106,7 @@ public:
 		}
 		return initial_sol;
 	}
+*/
 
 	// Method to get a random initial solution.
 	vector<int> random_sol(){
@@ -131,8 +133,7 @@ public:
 			if(sol[i] == 1){
 				for(int j = i+1; j < rows; j++){
 					if(sol[j] == 1){
-						value += euclidean_distance(matrix[i], matrix[j]);
-						printf("Value: %f\n",value);
+						value += distance_matrix[i][j];
 					}
 				}
 			}
@@ -180,10 +181,10 @@ public:
 		}
 	}
 
-	// Method to read a state and kepp it on the matrix, recieves the path of the txt file
+	// Method to read a state and kepp it on the distance_matrix, recieves the path of the txt file
 	void read_state(string path){
 		ifstream i_file;
-		int lines;
+		int lines = 0;
 		int x,y;
 		double val;
 
@@ -194,28 +195,28 @@ public:
 		i_file >> m_set;
 		search_space.resize(rows);
 
-		matrix.resize(rows);
+		distance_matrix.resize(rows);
 		for(int i = 0; i < rows; i++){
 			lines += i;
-			matrix[i].resize(rows);
+			distance_matrix[i].resize(rows);
 			search_space[i] = 1;
 		}
 		for(int i = 0; i < lines; i++){
 			i_file >> x;
 			i_file >> y;
 			i_file >> val;
-			matrix[x][y] = val;
-			matrix[y][x] = val;
-			matrix[x][x] = 0;
+			distance_matrix[x][y] = val;
+			distance_matrix[y][x] = val;
+			distance_matrix[x][x] = 0;
 		}
 		i_file.close();
 	}
 
-	// Print the matrix 
+	// Print the distance_matrix 
 	void print_matrix(){
 		for(int i = 0; i < rows; i++){
 			for(int j = 0; j < rows; j++){
-				printf("%f ", matrix[i][j]);
+				printf("%f ", distance_matrix[i][j]);
 			}
 			printf("\n");
 		}
@@ -226,20 +227,21 @@ public:
 int main(){
 	mdp_base mdp;
 
-	string path = "../GKD-a/GKD-a_1_n10_m2.txt";
+	string path = "../SOM-b/SOM-b_1_n100_m10.txt";
 	mdp.read_state(path);
 	printf("READED\n");
 	vector<int> test;
-	mdp.print_matrix();
+	//mdp.print_matrix();
 	mdp.local_search_first_best();
-	//for(int i = 0; i < mdp.rows; i++){
-	//	if(mdp.best_sol[i] == 1){
-	//		printf("%d ",i);
-	//	}
-	//}
-	//printf("\n");
-	//printf("Best value = %f\n",mdp.best_value);
-	mdp.best_sol = mdp.random_sol();
-	mdp.best_value = mdp.sol_value(mdp.best_sol);
-	printf("First value = %f\n",mdp.best_value);
+	for(int i = 0; i < mdp.rows; i++){
+		if(mdp.best_sol[i] == 1){
+			printf("%d ",i);
+		}
+	}
+	printf("\n");
+	printf("Best value = %f\n",mdp.best_value);
+	//mdp.best_sol = mdp.random_sol();
+	//mdp.best_value = mdp.sol_value(mdp.best_sol);
+	//printf("First value = %f\n",mdp.best_value);
+	//mdp.print_matrix();
 }
