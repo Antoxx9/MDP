@@ -132,7 +132,7 @@ public:
 				for(int j = 0; j < rows; j++){
 					if(current_sol[j] == 1){
 						new_value = current_value + exchange(current_sol, i, j);
-						if(new_value > best_value){
+						if(new_value > current_value){
 							current_sol[j] = 0;
 							current_sol[i] = 1;
 							current_value = new_value;
@@ -151,21 +151,25 @@ public:
 
 
 	void local_search_first_best(){
+
 		double new_value = 0; 
-		int no_changes = 0;
-		int size = 0;
-		destructive_2();
-		while(no_changes < 500){
-			if(get_first_best()){
-				no_changes = 0;
+		random_sol();
+
+		for(int i = 0; i < rows; i++){
+			if(best_sol[i] == 1){
+				printf("%d ",i);
 			}
-			else{
-				no_changes++;
+		}
+		printf("\n");
+		printf("First value = %f\n",best_value);
+
+		while(true){
+			if(!get_first_best()){
+				return;
 			}
-			printf("%f %f\n",current_value, best_value);
 		}
 	}
-
+/*
 	void local_search(int iter) {
 		int no_changes = 0;	
 		while(no_changes < iter) {
@@ -176,7 +180,7 @@ public:
 			}
 		}
 	}
-
+*/
 	void best_for_percentage(int percent){
 		int neighbors_visited = 0;
 		int num_neighbors = ceil((percent / 100) * neighborhood_size);
@@ -247,7 +251,7 @@ public:
 int main(){
 	mdp_base mdp;
 
-	string path = "../MDG-c/MDG-c_1_n3000_m300.txt";
+	string path = "../SOM-b/SOM-b_1_n100_m10.txt";
 	mdp.read_state(path);
 	printf("READED\n");
 	vector<int> test;
