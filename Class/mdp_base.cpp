@@ -39,9 +39,8 @@ public:
 	// Method to calculate the euclidean distance between 2 vectors.
 	double euclidean_distance(vector< double > &si, vector< double > &sj){
 		double sum = 0;
-		int x1,y1,x2,y2;
 		for(int i = 0; i < (int)si.size(); i++){
-			sum += pow((si[i] - sj[i]),2);
+			sum += ((si[i] - sj[i])*(si[i] - sj[i]));
 		}
 		sum = sqrt(sum);
 		return sum;
@@ -133,6 +132,7 @@ public:
 				for(int j = i+1; j < rows; j++){
 					if(sol[j] == 1){
 						value += euclidean_distance(matrix[i], matrix[j]);
+						printf("Value: %f\n",value);
 					}
 				}
 			}
@@ -226,16 +226,20 @@ public:
 int main(){
 	mdp_base mdp;
 
-	string path = "../SOM-b/SOM-b_1_n100_m10.txt";
+	string path = "../GKD-a/GKD-a_1_n10_m2.txt";
 	mdp.read_state(path);
 	printf("READED\n");
 	vector<int> test;
+	mdp.print_matrix();
 	mdp.local_search_first_best();
-	for(int i = 0; i < mdp.rows; i++){
-		if(mdp.best_sol[i] == 1){
-			printf("%d ",i);
-		}
-	}
-	printf("\n");
-	printf("Best value = %f\n",mdp.best_value);
+	//for(int i = 0; i < mdp.rows; i++){
+	//	if(mdp.best_sol[i] == 1){
+	//		printf("%d ",i);
+	//	}
+	//}
+	//printf("\n");
+	//printf("Best value = %f\n",mdp.best_value);
+	mdp.best_sol = mdp.random_sol();
+	mdp.best_value = mdp.sol_value(mdp.best_sol);
+	printf("First value = %f\n",mdp.best_value);
 }
