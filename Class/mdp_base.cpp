@@ -34,29 +34,8 @@ public:
 	int rows, m_set, neighborhood_size;
 	double current_value, best_value;
 
+
 	mdp_base(){};
-
-
-	// Method to calculate the euclidean distance between 2 vectors.
-	double euclidean_distance(vector< double > &si, vector< double > &sj){
-		double sum = 0;
-		for(int i = 0; i < (int)si.size(); i++){
-			sum += ((si[i] - sj[i])*(si[i] - sj[i]));
-		}
-		sum = sqrt(sum);
-		return sum;
-	}
-
-	// Method to add an element si to a set without m elements.
-	double add_set_i(vector<int> &set, int index){
-		double resp = 0;
-		for(int i = 0; i < (int)set.size(); i++){
-			if(set[i] == 1){
-				resp += euclidean_distance(distance_matrix[i], distance_matrix[index]);
-			}
-		}
-		return resp;
-	}
 
 	// Method to calculate the cost of exchanging 2 elements in the current solution set.
 	double exchange(vector<int> &set, int new_s, int old_s){
@@ -69,63 +48,18 @@ public:
 		return resp;
 	}
 
-/*
+
 	// Method to calculate the distance between a si and a set X
-	double distance_X(vector<double> &si, vector<int> &X){
+	double distance_X(int si, vector<int> &X){
 		double distance = 0;
 		for(int j = 0; j < X.size(); j++){
 			if(X[j] == 1){
-				distance += euclidean_distance(si, distance_matrix[j]);
+				distance += distance_matrix[si][j];
 			}
 		}
 		return distance;
 	}
 
-	// Destructive Method D2 to find an initial solution.
-	vector<int> destructive_2(){
-		vector<int> initial_sol = search_space;
-		int selected = rows;
-		double min_dist, aux;
-		int min_index;
-		while(selected > m_set){
-			min_dist = INF;
-			min_index = -1;
-			for(int i = 0; i < (int)initial_sol.size(); i++){
-				if(initial_sol[i] == 1){
-					aux = distance_X(distance_matrix[i], initial_sol);
-				}
-				else{
-					aux = INF;
-				}
-				if(aux < min_dist){
-					min_index = i;
-					min_dist = aux;
-				}
-			}
-			initial_sol[min_index] = 0;
-			selected--;
-		}
-		return initial_sol;
-	}
-*/
-
-	// Method to get a random initial solution.
-	vector<int> random_sol(){
-		vector<int> initial_sol;
-		initial_sol.resize(rows);
-		int size = 0;
-		int random;
-		srand(time(NULL));
-		while(size < m_set){
-			random = rand()%rows;
-			if(initial_sol[random] == 0){
-				size++;
-				initial_sol[random] = 1;
-				search_space[random] = 0;
-			}
-		}
-		return initial_sol;
-	}
 
 	// Method to calculate the value of a solution
 	double sol_value(vector<int> & sol){
@@ -142,43 +76,93 @@ public:
 		return value;
 	}
 
-	void local_search_first_best(){
-		printf("Local search\n");
-		current_sol.resize(rows);
+	// Destructive Method D2 to find an initial solution.
+	void destructive_2(){
+		best_sol = search_space;
+		int selected = rows;
+		double min_dist, aux;
+		int min_index;
+		while(selected > m_set){
+			min_dist = INF;
+			min_index = -1;
+			for(int i = 0; i < (int)best_sol.size(); i++){
+				if(best_sol[i] == 1){
+					aux = distance_X(i, best_sol);
+				}
+				else{
+					aux = INF;
+				}
+				if(aux < min_dist){
+					min_index = i;
+					min_dist = aux;
+				}
+			}
+			best_sol[min_index] = 0;
+			selected--;
+		}
+		best_value = sol_value(best_sol);
+		current_sol = best_sol;
+		current_value = best_value;
+	}
+
+	// Method to get a random initial solution.
+	void random_sol(){
 		best_sol.resize(rows);
-		double new_value; 
-		int no_changes = 0;
+
 		int size = 0;
-		best_sol = random_sol();
-		for(int i = 0; i < rows; i++){
-			if(best_sol[i] == 1){
-				printf("%d ",i);
+		int random;
+		srand(time(NULL));
+		while(size < m_set){
+			random = rand()%rows;
+			if(best_sol[random] == 0){
+				size++;
+				best_sol[random] = 1;
+				search_space[random] = 0;
 			}
 		}
-		printf("\n");
 		best_value = sol_value(best_sol);
-		printf("First value = %f\n",best_value);
-		while(no_changes < 500){
-			new_value = 0;
-			for(int i = 0; i < rows; i++){
-				if(best_sol[i] == 0){
-					for(int j = 0; j!= i && j < rows; j++){
-						if(best_sol[j] == 1){
-							new_value = best_value + exchange(best_sol, i, j);
-							if(new_value > best_value){
-								//printf("Change\n");
-								best_sol[j] = 0;
-								best_sol[i] = 1;
-								best_value = new_value;
-								no_changes = 0;
-								i = rows+1;
-								break;
-							}
+		current_sol = best_sol;
+		current_value = best_value;
+	}
+
+	bool get_first_best(){
+		double new_value = 0;
+		for(int i = 0; i < rows; i++){
+			if(current_sol[i] == 0){
+				for(int j = 0; j < rows; j++){
+					if(current_sol[j] == 1){
+						new_value = current_value + exchange(current_sol, i, j);
+						if(new_value > best_value){
+							current_sol[j] = 0;
+							current_sol[i] = 1;
+							current_value = new_value;
+
+							best_sol = current_sol;
+							best_value = current_value;
+
+							return true;
 						}
 					}
 				}
 			}
-			no_changes++;
+		}
+		return false;
+	}
+
+
+	void local_search_first_best(){
+		double new_value = 0; 
+		int no_changes = 0;
+		int size = 0;
+		destructive_2();
+		while(no_changes < 500){
+			if(get_first_best()){
+				no_changes = 0;
+			}
+			else{
+				no_changes++;
+			}
+			printf("%f %f\n",current_value, best_value);
 		}
 	}
 
@@ -263,12 +247,13 @@ public:
 int main(){
 	mdp_base mdp;
 
-	string path = "../SOM-b/SOM-b_1_n100_m10.txt";
+	string path = "../MDG-c/MDG-c_1_n3000_m300.txt";
 	mdp.read_state(path);
 	printf("READED\n");
 	vector<int> test;
 	//mdp.print_matrix();
 	mdp.local_search_first_best();
+	//mdp.destructive_2();
 	for(int i = 0; i < mdp.rows; i++){
 		if(mdp.best_sol[i] == 1){
 			printf("%d ",i);
