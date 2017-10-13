@@ -34,8 +34,49 @@ public:
 	int rows, m_set, neighborhood_size;
 	double current_value, best_value;
 
-
 	mdp_base(){};
+
+	// Method to read a state and kepp it on the distance_matrix, recieves the path of the txt file
+	void read_state(string path){
+		ifstream i_file;
+		int lines = 0;
+		int x,y;
+		double val;
+
+		i_file.open(path.c_str());
+		string linea;
+		
+		i_file >> rows;
+		i_file >> m_set;
+		neighborhood_size = m_set * (rows - m_set); 
+		search_space.resize(rows);
+
+		distance_matrix.resize(rows);
+		for(int i = 0; i < rows; i++){
+			lines += i;
+			distance_matrix[i].resize(rows);
+			search_space[i] = 1;
+		}
+		for(int i = 0; i < lines; i++){
+			i_file >> x;
+			i_file >> y;
+			i_file >> val;
+			distance_matrix[x][y] = val;
+			distance_matrix[y][x] = val;
+			distance_matrix[x][x] = 0;
+		}
+		i_file.close();
+	}
+
+	// Print the distance_matrix 
+	void print_matrix(){
+		for(int i = 0; i < rows; i++){
+			for(int j = 0; j < rows; j++){
+				printf("%f ", distance_matrix[i][j]);
+			}
+			printf("\n");
+		}
+	}
 
 	// Method to calculate the cost of exchanging 2 elements in the current solution set.
 	double exchange(vector<int> &set, int new_s, int old_s){
@@ -74,6 +115,50 @@ public:
 			}
 		}
 		return value;
+	}
+
+	// Destructive Method D2 to find an initial solution.
+	void constructive_2() {
+		int selected = 0;
+		double max_distance, aux_distance;
+		int max_index;
+
+		best_sol = search_space;
+		max_distance = INT_MIN;
+		max_index = -1;
+		for (int i = 0; i < rows; i++) {
+			aux_distance = distance_X(i, best_sol);
+			if (aux_distance > max_distance) {
+				max_distance = aux_distance;
+				max_index = i;	
+			}
+		}
+		for (int i = 0; i < rows; i++) {
+			best_sol[i] = 0;
+		}
+		best_sol[max_index] = 1;
+		selected++;
+		//cout << "Seleccionado " << selected << ": " << max_index << endl;
+		while (selected < m_set) {
+			max_distance = INT_MIN;
+			max_index = -1;
+			for (int i = 0; i < rows; i++) {
+				if (best_sol[i] == 0) {
+					aux_distance = distance_X(i, best_sol);
+				}
+				if (aux_distance > max_distance) {
+					max_distance = aux_distance;
+					max_index = i;
+					
+				}
+			}
+			best_sol[max_index] = 1;
+			selected++;
+			//cout << "Seleccionado " << selected << ": " << max_index << endl;
+		}
+		best_value = sol_value(best_sol);
+		current_sol = best_sol;
+		current_value = best_value;
 	}
 
 	// Destructive Method D2 to find an initial solution.
@@ -147,37 +232,9 @@ public:
 		return false;
 	}
 
-
-	void local_search(int flavor){
-		bool stop = false;
-		double new_value = 0; 
-		//random_sol();
-		destructive_2();
-
-		for(int i = 0; i < rows; i++){
-			if(best_sol[i] == 1){
-				printf("%d ",i);
-			}
-		}
-		printf("\n");
-		printf("First value = %f\n",best_value);
-
-		while(!stop){
-			if (flavor == 1) {
-				stop = !get_first_best();
-			}
-			else if (flavor == 2) {
-				stop = !best_for_percentage(100);
-			}
-		}
-	}
-
 	bool best_for_percentage(int percent){
 		int neighbors_visited = 0;
-		//cout << neighbors_visited;
 		int num_neighbors = ceil((percent / 100.0) * neighborhood_size);
-		//cout << "Tamaño vecindad: " << neighborhood_size << endl;
-		cout << "Porcentaje vecindad: " << num_neighbors << endl;
 		int best_exchange = INT_MIN;
 		int best_i = -1, best_j = -1;
 		int aux_exchange;
@@ -207,68 +264,73 @@ public:
 		return false;
 	}
 
-	// Method to read a state and kepp it on the distance_matrix, recieves the path of the txt file
-	void read_state(string path){
-		ifstream i_file;
-		int lines = 0;
-		int x,y;
-		double val;
+	void local_search(int flavor){
+		bool stop = false;
+		double new_value = 0; 
 
-		i_file.open(path.c_str());
-		string linea;
-		
-		i_file >> rows;
-		i_file >> m_set;
-		neighborhood_size = m_set * (rows - m_set); 
-		search_space.resize(rows);
-
-		distance_matrix.resize(rows);
 		for(int i = 0; i < rows; i++){
-			lines += i;
-			distance_matrix[i].resize(rows);
-			search_space[i] = 1;
-		}
-		for(int i = 0; i < lines; i++){
-			i_file >> x;
-			i_file >> y;
-			i_file >> val;
-			distance_matrix[x][y] = val;
-			distance_matrix[y][x] = val;
-			distance_matrix[x][x] = 0;
-		}
-		i_file.close();
-	}
-
-	// Print the distance_matrix 
-	void print_matrix(){
-		for(int i = 0; i < rows; i++){
-			for(int j = 0; j < rows; j++){
-				printf("%f ", distance_matrix[i][j]);
+			if(best_sol[i] == 1){
+				printf("%d ",i);
 			}
-			printf("\n");
+		}
+		printf("\n");
+		printf("First value = %f\n",best_value);
+
+		while(!stop){
+			if (flavor == 1) {
+				stop = !get_first_best();
+			}
+			else if (flavor == 2) {
+				stop = !best_for_percentage(100);
+			}
 		}
 	}
-
 };
 
-int main(){
+int main(int argc, char *argv[]) {
+	if (argc < 4) {
+		cout << "Usage: " << argv[0] << " file_path -rcd -bp" << endl;
+		cout << "Options:" << endl;
+		cout << "  -r    Random initial solution." << endl;
+		cout << "  -c    Constructive2 method for initial solution." << endl;
+		cout << "  -d    Destructive2 method for initial solution." << endl;
+		cout << endl;
+		cout << "  -b    Best first local search." << endl;
+		cout << "  -p    Percentage of neighborhood local search." << endl;
+		return 0;
+	}
 	mdp_base mdp;
-	string path = "../GKD-a/GKD-a_1_n10_m2.txt";
+	cout << argv[1];
+	string path = argv[1];
 	mdp.read_state(path);
 	printf("READED\n");
-	vector<int> test;
 	//mdp.print_matrix();
-	mdp.local_search(2);
-	//mdp.destructive_2();
-	for(int i = 0; i < mdp.rows; i++){
-		if(mdp.best_sol[i] == 1){
+	//cout << "Argumento: " << argv[2] << endl;
+	//cout << "Comparacion: " << ((string)argv[2] == "-r") << endl;
+	if (string(argv[2]) == "-r") {
+		//cout << "Random" << endl;
+		mdp.random_sol();
+	}
+	else if (string(argv[2]) == "-c") {
+		mdp.constructive_2();
+	}
+	else if (string(argv[2]) == "-d") {
+		mdp.destructive_2();
+	}
+
+	if (string(argv[3]) == "-b") {
+		mdp.local_search(1);
+	}
+	else if (string(argv[3]) == "-p") {
+		mdp.local_search(2);
+	}
+	//mdp.random_sol();
+	//mdp.local_search(1);
+	for (int i = 0; i < mdp.rows; i++) {
+		if (mdp.best_sol[i] == 1) {
 			printf("%d ",i);
 		}
 	}
 	printf("\n");
 	printf("Best value = %f\n",mdp.best_value);
-	//mdp.best_sol = mdp.random_sol();
-	//mdp.best_value = mdp.sol_value(mdp.best_sol);
-	//printf("First value = %f\n",mdp.best_value);
-	//mdp.print_matrix();
 }
