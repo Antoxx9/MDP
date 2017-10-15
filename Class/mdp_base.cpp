@@ -40,7 +40,7 @@ public:
 	void read_state(string path){
 		ifstream i_file;
 		int lines = 0;
-		int x,y;
+		int x,y	;
 		double val;
 
 		i_file.open(path.c_str());
@@ -138,7 +138,6 @@ public:
 		}
 		best_sol[max_index] = 1;
 		selected++;
-		//cout << "Seleccionado " << selected << ": " << max_index << endl;
 		while (selected < m_set) {
 			max_distance = INT_MIN;
 			max_index = -1;
@@ -154,7 +153,6 @@ public:
 			}
 			best_sol[max_index] = 1;
 			selected++;
-			//cout << "Seleccionado " << selected << ": " << max_index << endl;
 		}
 		best_value = sol_value(best_sol);
 		current_sol = best_sol;
@@ -235,12 +233,19 @@ public:
 	bool best_for_percentage(int percent){
 		int neighbors_visited = 0;
 		int num_neighbors = ceil((percent / 100.0) * neighborhood_size);
-		int best_exchange = INT_MIN;
 		int best_i = -1, best_j = -1;
-		int aux_exchange;
-		for (int i = 0; i < rows && neighbors_visited < num_neighbors; i++) {
+		int i, j, random_i, random_j;
+		double best_exchange = INT_MIN;
+		double aux_exchange;
+		
+		srand(time(NULL));
+		random_i = rand() % rows;
+		i = random_i;
+		do {
 			if (current_sol[i] == 0) {
-				for (int j = 0; j < rows && neighbors_visited < num_neighbors; j++) {
+				random_j = rand() % rows;
+				j = random_j;
+				do {
 					if (current_sol[j] == 1) {
 						aux_exchange = exchange(current_sol, i, j);
 						if (aux_exchange > best_exchange) {
@@ -250,9 +255,11 @@ public:
 						}
 						neighbors_visited++;
 					}
-				}
+					j = (j + 1) % rows;
+				} while (j != random_j && neighbors_visited < num_neighbors);
 			}
-		}
+			i = (i + 1) % rows;
+		} while (i != random_i && neighbors_visited < num_neighbors);
 		if (current_value + best_exchange > best_value) {
 			current_sol[best_i] = 1;
 			current_sol[best_j] = 0;
@@ -268,14 +275,6 @@ public:
 		bool stop = false;
 		double new_value = 0; 
 
-		for(int i = 0; i < rows; i++){
-			if(best_sol[i] == 1){
-				printf("%d ",i);
-			}
-		}
-		printf("\n");
-		printf("First value = %f\n",best_value);
-
 		while(!stop){
 			if (flavor == 1) {
 				stop = !get_first_best();
@@ -288,8 +287,8 @@ public:
 };
 
 int main(int argc, char *argv[]) {
-	if (argc < 4) {
-		cout << "Usage: " << argv[0] << " file_path -rcd -bp" << endl;
+	if (argc < 4 || ((string)argv[3] == "-p") && argc < 5) {
+		cout << "Usage: " << argv[0] << " file_path -rcd -bp [percent]" << endl;
 		cout << "Options:" << endl;
 		cout << "  -r    Random initial solution." << endl;
 		cout << "  -c    Constructive2 method for initial solution." << endl;
@@ -297,40 +296,40 @@ int main(int argc, char *argv[]) {
 		cout << endl;
 		cout << "  -b    Best first local search." << endl;
 		cout << "  -p    Percentage of neighborhood local search." << endl;
+		cout << endl;
+		cout << "  percent   Percentage of neighbors to visit by local search." << endl; 
+		cout << "            If -p option is selected this must be specified." << endl;
 		return 0;
 	}
+	clock_t t = clock();
 	mdp_base mdp;
-	cout << argv[1];
 	string path = argv[1];
 	mdp.read_state(path);
-	printf("READED\n");
+	//printf("READED\n");
 	//mdp.print_matrix();
-	//cout << "Argumento: " << argv[2] << endl;
-	//cout << "Comparacion: " << ((string)argv[2] == "-r") << endl;
-	if (string(argv[2]) == "-r") {
-		//cout << "Random" << endl;
+	if ((string)argv[2] == "-r") {
 		mdp.random_sol();
 	}
-	else if (string(argv[2]) == "-c") {
+	else if ((string)argv[2] == "-c") {
 		mdp.constructive_2();
 	}
-	else if (string(argv[2]) == "-d") {
+	else if ((string)argv[2] == "-d") {
 		mdp.destructive_2();
 	}
 
-	if (string(argv[3]) == "-b") {
+	if ((string)argv[3] == "-b") {
 		mdp.local_search(1);
 	}
-	else if (string(argv[3]) == "-p") {
+	else if ((string)argv[3] == "-p") {
 		mdp.local_search(2);
 	}
-	//mdp.random_sol();
-	//mdp.local_search(1);
+	t = clock() - t;
 	for (int i = 0; i < mdp.rows; i++) {
 		if (mdp.best_sol[i] == 1) {
 			printf("%d ",i);
 		}
 	}
 	printf("\n");
-	printf("Best value = %f\n",mdp.best_value);
+	printf("%f\n",mdp.best_value);
+	printf ("%f\n",((float)t)/CLOCKS_PER_SEC);
 }
