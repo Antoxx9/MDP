@@ -11,6 +11,7 @@
 #include <queue>
 #include <map>
 #include <cmath>
+#include <cstdlib>
 #include <sstream>
 #include <time.h>
 #include <set>
@@ -148,7 +149,6 @@ public:
 				if (aux_distance > max_distance) {
 					max_distance = aux_distance;
 					max_index = i;
-					
 				}
 			}
 			best_sol[max_index] = 1;
@@ -188,6 +188,117 @@ public:
 		current_value = best_value;
 	}
 
+	void construction_GR_C2(double alpha){
+		int selected = 0;
+		double max_distance, min_distance, aux_distance;
+		vector<int> RCL;
+		srand(time(NULL));
+		int random;
+
+		best_sol = search_space;
+		max_distance = INT_MIN;
+		min_distance = INT_MAX;
+		for (int i = 0; i < rows; i++) {
+			aux_distance = distance_X(i, best_sol);
+			if (aux_distance > max_distance) {
+				max_distance = aux_distance;
+			}
+			if (aux_distance < min_distance) {
+				min_distance = aux_distance;	
+			}
+		}
+
+		for (int i = 0; i < rows; i++) {
+			aux_distance = distance_X(i, best_sol);
+			if (aux_distance >= min_distance + alpha * (max_distance - min_distance)) { 
+				RCL.push_back(i);
+			}
+		}
+		random = rand() % RCL.size();
+
+
+		for (int i = 0; i < rows; i++) {
+			best_sol[i] = 0;
+		}
+		best_sol[RCL[random]] = 1;
+		selected++;
+
+		while (selected < m_set) {
+			RCL.clear();
+			max_distance = INT_MIN;
+			min_distance = INT_MAX;
+			for (int i = 0; i < rows; i++) {
+				if (best_sol[i] == 0) {
+					aux_distance = distance_X(i, best_sol);
+					if (aux_distance > max_distance) {
+						max_distance = aux_distance;
+					}
+					if (aux_distance < min_distance) {
+						min_distance = aux_distance;	
+					}
+				}
+			}	
+			for (int i = 0; i < rows; i++) {
+				if (best_sol[i] == 0) {
+					aux_distance = distance_X(i, best_sol);
+					if (aux_distance >= min_distance + alpha * (max_distance - min_distance)) { 
+						RCL.push_back(i);
+					}
+				}
+			}
+			random = rand() % RCL.size();			
+			best_sol[RCL[random]] = 1;
+			selected++;
+		}
+		best_value = sol_value(best_sol);
+		current_sol = best_sol;
+		current_value = best_value;	
+	}
+
+
+	void construction_GR_D2(double alpha) {
+		int selected = rows;
+		double max_distance, min_distance, aux_distance;
+		vector<int> RCL;
+		srand(time(NULL));
+		int random;
+
+		best_sol = search_space;
+		//cout << "Comenzando" << endl;
+		while (selected > m_set) {
+			//cout << "En el while" << endl;
+			RCL.clear();
+			max_distance = INT_MIN;
+			min_distance = INT_MAX;
+			for (int i = 0; i < rows; i++) {
+				if (best_sol[i] == 1) {
+					aux_distance = distance_X(i, best_sol);
+					//cout << aux_distance <<  endl;
+					if (aux_distance > max_distance) {
+						max_distance = aux_distance;
+					}
+					if (aux_distance < min_distance) {
+						min_distance = aux_distance;	
+					}
+				}
+			}
+			for (int i = 0; i < rows; i++) {
+				if (best_sol[i] == 1) { 
+					aux_distance = distance_X(i, best_sol);
+					if (aux_distance <= min_distance + alpha * (max_distance - min_distance)) { 
+						RCL.push_back(i);
+					}
+				}
+			}
+			random = rand() % RCL.size();			
+			best_sol[RCL[random]] = 0;
+			selected--;
+		}
+		best_value = sol_value(best_sol);
+		current_sol = best_sol;
+		current_value = best_value;
+	}
+
 	// Method to get a random initial solution.
 	void random_sol(){
 		best_sol.resize(rows);
@@ -197,7 +308,7 @@ public:
 		srand(time(NULL));
 		while(size < m_set){
 			random = rand()%rows;
-			if(best_sol[random] == 0){
+			if (best_sol[random] == 0) {
 				size++;
 				best_sol[random] = 1;
 				search_space[random] = 0;
@@ -208,7 +319,7 @@ public:
 		current_value = best_value;
 	}
 
-	bool get_first_best(){
+	bool get_first_best() {
 		double new_value = 0;
 		for(int i = 0; i < rows; i++){
 			if(current_sol[i] == 0){
@@ -221,23 +332,22 @@ public:
 							current_value = new_value;
 							best_sol = current_sol;
 							best_value = current_value;
-							return true;
+							return false;
 						}
 					}
 				}
 			}
 		}
-		return false;
+		return true;
 	}
 
-	bool best_for_percentage(int percent){
+	bool best_of_percentage(int percent){
 		int neighbors_visited = 0;
 		int num_neighbors = ceil((percent / 100.0) * neighborhood_size);
 		int best_i = -1, best_j = -1;
 		int i, j, random_i, random_j;
 		double best_exchange = INT_MIN;
 		double aux_exchange;
-		
 		srand(time(NULL));
 		random_i = rand() % rows;
 		i = random_i;
@@ -266,47 +376,90 @@ public:
 			current_value = current_value + best_exchange;
 			best_sol = current_sol;
 			best_value = current_value;
-			return true;
+			return false;
 		}
-		return false;
+		return true;
 	}
 
-	void local_search(int flavor){
-		bool stop = false;
+	void local_search(int flavor, int percent) {
+		bool isLocalMin = false;
 		double new_value = 0; 
 
-		while(!stop){
+		while(!isLocalMin){
 			if (flavor == 1) {
-				stop = !get_first_best();
+				isLocalMin = get_first_best();
 			}
 			else if (flavor == 2) {
-				stop = !best_for_percentage(100);
+				isLocalMin = best_of_percentage(percent);
 			}
 		}
+	}
+
+	void GRASP(int construction, int niter, double alpha_rate, int flavor, int percent) {
+		int n_contructions = 0;
+		vector<int> star_sol;
+		double alpha = 0.5;
+		double star_value = INT_MIN;
+
+		while (0.1 <= alpha && alpha <= 0.9) {
+			if (construction == 0) {
+				construction_GR_C2(alpha);
+			}
+			else {
+				construction_GR_D2(alpha); 
+			}
+			local_search(flavor, percent);
+			if (best_value > star_value) {
+				star_sol = best_sol;
+				star_value = best_value;
+				n_contructions = 0;
+			}
+			else {
+				n_contructions++;
+			}
+			if (n_contructions == niter && construction == 0) {
+				alpha += alpha_rate;
+				n_contructions = 0;	
+			}
+			else if (n_contructions == niter && construction == 1) {
+				alpha -= alpha_rate;
+				n_contructions = 0;	
+			}
+		}
+		best_sol = star_sol;
+		best_value = star_value;
 	}
 };
 
 int main(int argc, char *argv[]) {
-	if (argc < 4 || ((string)argv[3] == "-p") && argc < 5) {
-		cout << "Usage: " << argv[0] << " file_path -rcd -bp [percent]" << endl;
-		cout << "Options:" << endl;
+	if (argc < 4 || (((string)argv[3] == "-p") && argc < 5)) {
+		cout << "Usage: " << argv[0] << " file_path [-rcd] [-gcgd niter alpha_rate] [-bp percentage]" << endl;
+		cout << "Initial solution:" << endl;
 		cout << "  -r    Random initial solution." << endl;
 		cout << "  -c    Constructive2 method for initial solution." << endl;
 		cout << "  -d    Destructive2 method for initial solution." << endl;
 		cout << endl;
+		cout << "Metaheuristics:" << endl;
+		cout << "  -gc   Constructive heuristic GRASP_C2." << endl;
+		cout << "  -gd   Destructive heuristic GRASP_D2." << endl;
+		cout << "  niter Number of iterations (with no improvement) needed to" << endl; 
+		cout << "        increment or decrease alpha value." << endl; 
+		cout << "  alpha_rate Rate of increment or decrement of alpha value." << endl;
+		cout << endl;
+		cout << "Local search:" << endl;	
 		cout << "  -b    Best first local search." << endl;
 		cout << "  -p    Percentage of neighborhood local search." << endl;
-		cout << endl;
-		cout << "  percent   Percentage of neighbors to visit by local search." << endl; 
-		cout << "            If -p option is selected this must be specified." << endl;
+		cout << "  percentage   Percentage of neighbors to visit by local search." << endl; 
+		cout << "               If -p option is selected this must be specified." << endl;
 		return 0;
 	}
 	clock_t t = clock();
 	mdp_base mdp;
 	string path = argv[1];
 	mdp.read_state(path);
+	bool metah = false;
 	//printf("READED\n");
-	//mdp.print_matrix();
+	//mdp.print_matrix(); 
 	if ((string)argv[2] == "-r") {
 		mdp.random_sol();
 	}
@@ -316,13 +469,33 @@ int main(int argc, char *argv[]) {
 	else if ((string)argv[2] == "-d") {
 		mdp.destructive_2();
 	}
-
-	if ((string)argv[3] == "-b") {
-		mdp.local_search(1);
+	else if ((string)argv[2] == "-gc") {
+		if ((string)argv[5] == "-b") {
+			mdp.GRASP(0, atoi(argv[3]), atof(argv[4]), 1, 0);
+		}
+		else if ((string)argv[5] == "-p") {
+			mdp.GRASP(0, atoi(argv[3]), atof(argv[4]), 2, atoi(argv[6]));
+		}
+		metah = true;
 	}
-	else if ((string)argv[3] == "-p") {
-		mdp.local_search(2);
+	else if ((string)argv[2] == "-gd") {
+		if ((string)argv[5] == "-b") {
+			mdp.GRASP(1, atoi(argv[3]), atof(argv[4]), 1, 0);
+		}
+		else if ((string)argv[5] == "-p") {
+			mdp.GRASP(1, atoi(argv[3]), atof(argv[4]), 2, atoi(argv[6]));
+		}
+		metah = true;
 	}
+	if ((string)argv[3] == "-b" && !metah) {
+		//cout << "-b" << endl;
+		mdp.local_search(1, 0);
+	}
+	else if ((string)argv[3] == "-p" && !metah) {
+		//cout << "-p" << endl;
+		mdp.local_search(2, atoi(argv[4]));
+	}
+	
 	t = clock() - t;
 	for (int i = 0; i < mdp.rows; i++) {
 		if (mdp.best_sol[i] == 1) {
