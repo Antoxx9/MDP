@@ -32,6 +32,8 @@ public:
 	vector<int> search_space;
 	vector<int> current_sol;
 	vector<int> best_sol;
+	vector<int> freq;
+	vector<double> quality;
 	int rows, m_set, neighborhood_size;
 	double current_value, best_value;
 
@@ -51,12 +53,16 @@ public:
 		i_file >> m_set;
 		neighborhood_size = m_set * (rows - m_set); 
 		search_space.resize(rows);
-
 		distance_matrix.resize(rows);
+		freq.resize(rows);
+		quality.resize(rows);
+
 		for(int i = 0; i < rows; i++){
 			lines += i;
 			distance_matrix[i].resize(rows);
 			search_space[i] = 1;
+			freq[i] = 0;
+			quality[i] = 0.0;
 		}
 		for(int i = 0; i < lines; i++){
 			i_file >> x;
@@ -298,6 +304,46 @@ public:
 		current_sol = best_sol;
 		current_value = best_value;
 	}
+
+'''
+	void construction_TABU_C2(int niter, double beta, double delta) {
+		int n = 0, selected, max_freq, aux_distance;
+		double max_q;
+
+		while (n < niter) {
+			selected = 0;
+			max_freq = INT_MIN;
+			max_q = 
+			//Falta seleccionar al primer elemento
+			while (selected < m_set) {
+				// Compute max_freq as the maximun of freq[i] for all i.
+				// Let max_q be the maximum of quality[i] for all i.
+				for (int i = 0; i < rows; i++) {
+					if (freq[i] > max_freq) {
+						max_freq = freq[i];
+					}
+					if (quality[i] > max_q) {
+						max_q = quality[i];	
+					}
+				}
+				max_distance = INT_MIN;
+				for (int i = 0; i < rows; i++) {
+					if (best_sol[i] == 0) {
+						aux_distance = distance_X(i, best_sol);
+						aux_distance -= beta * *(freq[i] / max_freq)
+						aux_distance += delta * *(quality[i] / max_q)
+						if (aux_distance > max_distance) {
+							max_distance = aux_distance;
+						}
+						if (aux_distance < min_distance) {
+							min_distance = aux_distance;	
+						}
+					}
+				}	
+			}
+		}
+	}
+'''
 
 	// Method to get a random initial solution.
 	void random_sol(){
