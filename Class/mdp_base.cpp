@@ -305,17 +305,56 @@ public:
 		current_value = best_value;
 	}
 
-'''
-	void construction_TABU_C2(int niter, double beta, double delta) {
-		int n = 0, selected, max_freq, aux_distance;
+	queue<vector<int> > construction_TABU_C2(int niter, double beta, double delta) {
+		queue<vector<int> > best_sols;
+		int queue_size = 0;
+		int n = 0, max_freq;
 		double max_q;
-
+		int selected = 0;
+		double max_distance, aux_distance, min_distance, max_distance_prime;
+		int max_index;
+		double star_value = 0;
+		vector<int> star_sol;
 		while (n < niter) {
 			selected = 0;
-			max_freq = INT_MIN;
-			max_q = 
-			//Falta seleccionar al primer elemento
+			max_freq = 1;
+			max_q = 1;
+			best_sol = search_space;
+			max_distance = INT_MIN;
+			min_distance = INT_MAX;
+			max_index = -1;
+			for (int i = 0; i < rows; i++) {
+				aux_distance = distance_X(i, best_sol);
+				if (aux_distance > max_distance) {
+					max_distance = aux_distance;
+					max_index = i;	
+				}
+				if(aux_distance < min_distance){
+					min_distance = aux_distance;
+				}
+			}
+			for (int i = 0; i < rows; i++) {
+				best_sol[i] = 0;
+			}
+			best_sol[max_index] = 1;
+			selected++;
 			while (selected < m_set) {
+
+				max_distance = INT_MIN;
+				min_distance = INT_MAX;
+				for (int i = 0; i < rows; i++) {
+					if (best_sol[i] == 0) {
+						aux_distance = distance_X(i, best_sol);
+						//cout << aux_distance <<  endl;
+						if (aux_distance > max_distance) {
+							max_distance = aux_distance;
+						}
+						if (aux_distance < min_distance) {
+							min_distance = aux_distance;	
+						}
+					}
+				}
+
 				// Compute max_freq as the maximun of freq[i] for all i.
 				// Let max_q be the maximum of quality[i] for all i.
 				for (int i = 0; i < rows; i++) {
@@ -326,12 +365,80 @@ public:
 						max_q = quality[i];	
 					}
 				}
-				max_distance = INT_MIN;
+				max_distance_prime = INT_MIN;
+				max_index = -1;
 				for (int i = 0; i < rows; i++) {
 					if (best_sol[i] == 0) {
 						aux_distance = distance_X(i, best_sol);
-						aux_distance -= beta * *(freq[i] / max_freq)
-						aux_distance += delta * *(quality[i] / max_q)
+						aux_distance -= beta * (max_distance - min_distance) *(freq[i] / max_freq);
+						aux_distance += delta * (max_distance - min_distance) *(quality[i] / max_q);
+						if (aux_distance > max_distance_prime) {
+							max_distance_prime = aux_distance;
+							max_index = i;
+						}
+					}
+				}
+				if(max_index != -1){
+					best_sol[max_index] = 1;
+					freq[max_index] += 1;
+					selected++;
+				}
+			}
+			best_value = sol_value(best_sol);
+			if(best_value > star_value){
+				star_value = best_value;
+				star_sol = best_sol;
+				if(queue_size < 5){
+					best_sols.push(star_sol);
+					queue_size++;
+				}
+				else{
+					best_sols.pop();
+					best_sols.push(star_sol);
+				}
+			}
+			for(int i = 0; i < rows; i++){
+				if(best_sol[i] == 1){
+					quality[i] = quality[i]*(freq[i]-1)+best_value;
+					quality[i] = quality[i]/freq[i];
+				}
+			}
+			n++;
+		}
+		best_value = star_value;
+		best_sol = star_sol;
+		current_sol = best_sol;
+		current_value = best_value;	
+		return best_sols;
+	}
+
+	queue<vector<int> > construction_TABU_D2(int niter, double beta, double delta) {
+		queue<vector<int> > best_sols;
+		int queue_size = 0;
+		int n = 0, max_freq;
+		double max_q;
+		int selected = m_set;
+		double max_distance, aux_distance, min_distance, min_distance_prime;
+		int min_index;
+		double star_value = 0;
+		vector<int> star_sol;
+		while (n < niter) {
+			selected = rows;
+			max_freq = 1;
+			max_q = 1;
+			best_sol = search_space;
+			max_distance = INT_MIN;
+			min_distance = INT_MAX;
+			min_index = -1;
+
+			while (selected > m_set) {
+
+				max_distance = INT_MIN;
+				min_distance = INT_MAX;
+				for (int i = 0; i < rows; i++) {
+					if (best_sol[i] == 1) {
+						aux_distance = distance_X(i, best_sol);
+						//cout << aux_distance <<  endl;
 						if (aux_distance > max_distance) {
 							max_distance = aux_distance;
 						}
@@ -339,11 +446,66 @@ public:
 							min_distance = aux_distance;	
 						}
 					}
-				}	
+				}
+
+				// Compute max_freq as the maximun of freq[i] for all i.
+				// Let max_q be the maximum of quality[i] for all i.
+				for (int i = 0; i < rows; i++) {
+					if (freq[i] > max_freq) {
+						max_freq = freq[i];
+					}
+					if (quality[i] > max_q) {
+						max_q = quality[i];	
+					}
+				}
+				min_distance_prime = INT_MAX;
+				min_index = -1;
+				for (int i = 0; i < rows; i++) {
+					if (best_sol[i] == 1) {
+						aux_distance = distance_X(i, best_sol);
+						aux_distance -= beta * (max_distance - min_distance) *(freq[i] / max_freq);
+						aux_distance += delta * (max_distance - min_distance) *(quality[i] / max_q);
+						if (aux_distance < min_distance_prime) {
+							min_distance_prime = aux_distance;
+							min_index = i;
+						}
+					}
+				}
+				if(min_index != -1){
+					//printf("HOLA\n");
+					best_sol[min_index] = 0;
+					freq[min_index] += 1;
+					selected--;
+				}
 			}
+			//printf("best val %f y star %f\n",best_value, star_value);
+			best_value = sol_value(best_sol);
+			if(best_value > star_value){
+				star_value = best_value;
+				star_sol = best_sol;
+				if(queue_size < 5){
+					best_sols.push(star_sol);
+					queue_size++;
+				}
+				else{
+					best_sols.pop();
+					best_sols.push(star_sol);
+				}
+			}
+			for(int i = 0; i < rows; i++){
+				if(best_sol[i] == 1){
+					quality[i] = quality[i]*(freq[i]-1)+best_value;
+					quality[i] = quality[i]/freq[i];
+				}
+			}
+			n++;
 		}
+		best_value = star_value;
+		best_sol = star_sol;
+		current_sol = best_sol;
+		current_value = best_value;	
+		return best_sols;
 	}
-'''
 
 	// Method to get a random initial solution.
 	void random_sol(){
@@ -475,11 +637,38 @@ public:
 		best_sol = star_sol;
 		best_value = star_value;
 	}
+
+	void TABU(int construction, int niter, double beta_rate, double delta_rate, int flavor, int percent) {
+		int n_contructions = 0;
+		vector<int> star_sol;
+		double alpha = 0.5;
+		double star_value = INT_MIN;
+		queue<vector<int> > solutions;
+		srand(time(NULL));
+		int random = rand()%5;
+
+		if (construction == 0) {
+			solutions = construction_TABU_C2(niter, beta_rate, delta_rate);
+		}
+		else {
+			solutions = construction_TABU_D2(niter, beta_rate, delta_rate); 
+		}
+		
+		while(random > 0 && !solutions.empty()){
+			best_sol = solutions.front();
+			solutions.pop();
+			best_value = sol_value(best_sol);
+			random--;
+		}
+		current_sol = best_sol;
+		current_value = best_value;	
+		local_search(flavor, percent);
+	}
 };
 
 int main(int argc, char *argv[]) {
 	if (argc < 4 || (((string)argv[3] == "-p") && argc < 5)) {
-		cout << "Usage: " << argv[0] << " file_path [-rcd] [-gcgd niter alpha_rate] [-bp percentage]" << endl;
+		cout << "Usage: " << argv[0] << " file_path [-rcd] [-gcgd niter alpha_rate] [-tctd niter beta_rate delta_rate] [-bp percentage]" << endl;
 		cout << "Initial solution:" << endl;
 		cout << "  -r    Random initial solution." << endl;
 		cout << "  -c    Constructive2 method for initial solution." << endl;
@@ -491,6 +680,13 @@ int main(int argc, char *argv[]) {
 		cout << "  niter Number of iterations (with no improvement) needed to" << endl; 
 		cout << "        increment or decrease alpha value." << endl; 
 		cout << "  alpha_rate Rate of increment or decrement of alpha value." << endl;
+		cout << endl;
+		cout << "  -tc   Constructive heuristic TABU_C2." << endl;
+		cout << "  -td   Destructive heuristic TABU_D2." << endl;
+		cout << "  niter Number of iterations needed to" << endl; 
+		cout << "        make tabu constructions." << endl; 
+		cout << "  beta_weight Weight to give to the frequency of an element in the solution." << endl;
+		cout << "  delta_weight Weight to give to the quality of an element in the solution" << endl;
 		cout << endl;
 		cout << "Local search:" << endl;	
 		cout << "  -b    Best first local search." << endl;
@@ -530,6 +726,24 @@ int main(int argc, char *argv[]) {
 		}
 		else if ((string)argv[5] == "-p") {
 			mdp.GRASP(1, atoi(argv[3]), atof(argv[4]), 2, atoi(argv[6]));
+		}
+		metah = true;
+	}
+	else if ((string)argv[2] == "-tc") {
+		if ((string)argv[6] == "-b") {
+			mdp.TABU(0, atoi(argv[3]), atof(argv[4]), atof(argv[5]), 1, 0);
+		}
+		else if ((string)argv[6] == "-p") {
+			mdp.TABU(0, atoi(argv[3]), atof(argv[4]), atof(argv[5]), 2, atoi(argv[7]));
+		}
+		metah = true;
+	}
+	else if ((string)argv[2] == "-td") {
+		if ((string)argv[6] == "-b") {
+			mdp.TABU(1, atoi(argv[3]), atof(argv[4]), atof(argv[5]), 1, 0);
+		}
+		else if ((string)argv[6] == "-p") {
+			mdp.TABU(1, atoi(argv[3]), atof(argv[4]), atof(argv[5]), 2, atoi(argv[7]));
 		}
 		metah = true;
 	}
