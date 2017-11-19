@@ -124,7 +124,7 @@ public:
 		return value;
 	}
 
-	// Destructive Method D2 to find an initial solution.
+	// Constructive Method D2 to find an initial solution.
 	void constructive_2() {
 		int selected = 0;
 		double max_distance, aux_distance;
@@ -316,30 +316,56 @@ public:
 		double star_value = 0;
 		vector<int> star_sol;
 		while (n < niter) {
+			cout << "Iteracion: -------------------------------------------" << n << endl;
+			best_sol = search_space;
 			selected = 0;
 			max_freq = 1;
 			max_q = 1;
-			best_sol = search_space;
 			max_distance = INT_MIN;
 			min_distance = INT_MAX;
+			max_distance_prime = INT_MIN;
 			max_index = -1;
+
 			for (int i = 0; i < rows; i++) {
 				aux_distance = distance_X(i, best_sol);
 				if (aux_distance > max_distance) {
 					max_distance = aux_distance;
-					max_index = i;	
 				}
-				if(aux_distance < min_distance){
+				if (aux_distance < min_distance) {
 					min_distance = aux_distance;
 				}
 			}
+			// Compute max_freq as the maximun of freq[i] for all i.
+			// Let max_q be the maximum of quality[i] for all i.
+			for (int i = 0; i < rows; i++) {
+				if (freq[i] > max_freq) {
+					max_freq = freq[i];
+				}
+				if (quality[i] > max_q) {
+					max_q = quality[i];	
+				}
+			}
+			for (int i = 0; i < rows; i++) {
+				aux_distance = distance_X(i, best_sol);
+				aux_distance -= beta * (max_distance - min_distance) * (freq[i] / max_freq);
+				aux_distance += delta * (max_distance - min_distance) * (quality[i] / max_q);
+				cout << "Elemento " << i << endl;
+				cout << "Max frequency: " << max_freq << endl;
+				cout << aux_distance << endl;
+				if (aux_distance > max_distance_prime) {
+					max_distance_prime = aux_distance;
+					max_index = i;
+				}
+			}
+
 			for (int i = 0; i < rows; i++) {
 				best_sol[i] = 0;
 			}
 			best_sol[max_index] = 1;
+			freq[max_index] += 1;
+			cout << max_index << endl;
 			selected++;
 			while (selected < m_set) {
-
 				max_distance = INT_MIN;
 				min_distance = INT_MAX;
 				for (int i = 0; i < rows; i++) {
@@ -365,42 +391,40 @@ public:
 						max_q = quality[i];	
 					}
 				}
+
 				max_distance_prime = INT_MIN;
 				max_index = -1;
 				for (int i = 0; i < rows; i++) {
 					if (best_sol[i] == 0) {
 						aux_distance = distance_X(i, best_sol);
-						aux_distance -= beta * (max_distance - min_distance) *(freq[i] / max_freq);
-						aux_distance += delta * (max_distance - min_distance) *(quality[i] / max_q);
+						aux_distance -= beta * (max_distance - min_distance) * (freq[i] / max_freq);
+						aux_distance += delta * (max_distance - min_distance) * (quality[i] / max_q);
 						if (aux_distance > max_distance_prime) {
 							max_distance_prime = aux_distance;
 							max_index = i;
 						}
 					}
 				}
-				if(max_index != -1){
-					best_sol[max_index] = 1;
-					freq[max_index] += 1;
-					selected++;
-				}
+				best_sol[max_index] = 1;
+				freq[max_index] += 1;
+				selected++;
 			}
 			best_value = sol_value(best_sol);
-			if(best_value > star_value){
+			if (best_value > star_value) {
 				star_value = best_value;
 				star_sol = best_sol;
-				if(queue_size < 5){
+				if (queue_size < 5) {
 					best_sols.push(star_sol);
 					queue_size++;
 				}
-				else{
+				else {
 					best_sols.pop();
 					best_sols.push(star_sol);
 				}
 			}
 			for(int i = 0; i < rows; i++){
-				if(best_sol[i] == 1){
-					quality[i] = quality[i]*(freq[i]-1)+best_value;
-					quality[i] = quality[i]/freq[i];
+				if (best_sol[i] == 1){
+					quality[i] = (quality[i] * (freq[i] - 1) + best_value) / freq[i];
 				}
 			}
 			n++;
@@ -432,7 +456,6 @@ public:
 			min_index = -1;
 
 			while (selected > m_set) {
-
 				max_distance = INT_MIN;
 				min_distance = INT_MAX;
 				for (int i = 0; i < rows; i++) {
@@ -645,7 +668,7 @@ public:
 		double star_value = INT_MIN;
 		queue<vector<int> > solutions;
 		srand(time(NULL));
-		int random = rand()%5;
+		int random = rand() % 5;
 
 		if (construction == 0) {
 			solutions = construction_TABU_C2(niter, beta_rate, delta_rate);
@@ -654,7 +677,7 @@ public:
 			solutions = construction_TABU_D2(niter, beta_rate, delta_rate); 
 		}
 		
-		while(random > 0 && !solutions.empty()){
+		while (random > 0 && !solutions.empty()){
 			best_sol = solutions.front();
 			solutions.pop();
 			best_value = sol_value(best_sol);
@@ -668,7 +691,7 @@ public:
 
 int main(int argc, char *argv[]) {
 	if (argc < 4 || (((string)argv[3] == "-p") && argc < 5)) {
-		cout << "Usage: " << argv[0] << " file_path [-rcd] [-gcgd niter alpha_rate] [-tctd niter beta_rate delta_rate] [-bp percentage]" << endl;
+		cout << "Usage: " << argv[0] << " file_path [-rcd] [-gcgd niter alpha_rate] [-tctd niter beta_weight delta_weight] [-bp percentage]" << endl;
 		cout << "Initial solution:" << endl;
 		cout << "  -r    Random initial solution." << endl;
 		cout << "  -c    Constructive2 method for initial solution." << endl;
@@ -683,8 +706,7 @@ int main(int argc, char *argv[]) {
 		cout << endl;
 		cout << "  -tc   Constructive heuristic TABU_C2." << endl;
 		cout << "  -td   Destructive heuristic TABU_D2." << endl;
-		cout << "  niter Number of iterations needed to" << endl; 
-		cout << "        make tabu constructions." << endl; 
+		cout << "  niter Number of iterations needed to make tabu constructions." << endl; 
 		cout << "  beta_weight Weight to give to the frequency of an element in the solution." << endl;
 		cout << "  delta_weight Weight to give to the quality of an element in the solution" << endl;
 		cout << endl;
@@ -747,6 +769,7 @@ int main(int argc, char *argv[]) {
 		}
 		metah = true;
 	}
+
 	if ((string)argv[3] == "-b" && !metah) {
 		//cout << "-b" << endl;
 		mdp.local_search(1, 0);
