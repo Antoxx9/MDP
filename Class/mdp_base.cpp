@@ -706,7 +706,7 @@ public:
 		return RS;
 	}
 
-	vector<vector<int> > opposition_based_pool_initialize(int p){
+	vector<vector<int> > opposition_based_pool_initialize(int p, int flavor, int percent){
 		int count = 0;
 		
 		vector<vector<int> > population;
@@ -721,13 +721,13 @@ public:
 			Sc = generate_opposite_solution(S);
 			current_sol = S;
 			current_value = sol_value(S);
-			local_search(1, 0);
+			local_search(flavor, percent);
 			S = best_sol;
 			S_val = best_value;
 
 			current_sol = Sc;
 			current_value = sol_value(Sc);
-			local_search(1,0);
+			local_search(flavor,percent);
 			Sc = best_sol;
 			Sc_val = best_value;
 
@@ -771,7 +771,7 @@ public:
 				distance++;
 			}
 		}
-		return distance;
+		return m_set - distance;
 	}
 
 	double distance_population(vector<vector<int> > population, vector<int> S){
@@ -781,6 +781,7 @@ public:
 				distance += distance_sets(S, population[i]);
 			}
 		}
+		return distance/population.size();
 	}
 
 	void rank_based_pool_update(vector<vector<int> > population, vector<int> S, double beta){
@@ -848,7 +849,7 @@ public:
 
 		vector<int> S, Sc;
 		vector<vector<int> > childs;
-		vector<vector<int> > population = opposition_based_pool_initialize(p);
+		vector<vector<int> > population = opposition_based_pool_initialize(p, flavor, percent);
 		double star_value = 0;
 		vector<int> star_sol;
 		int ni,nj;
@@ -859,7 +860,7 @@ public:
 				star_sol = population[i];
 			}
 		}
-		while(no_better < 100){
+		while(no_better < 50){
 			ni = rand()%population.size();
 			nj = rand()%population.size();
 			while(ni == nj){
@@ -899,7 +900,7 @@ public:
 
 int main(int argc, char *argv[]) {
 	if (argc < 4 || (((string)argv[3] == "-p") && argc < 5)) {
-		cout << "Usage: " << argv[0] << " file_path [-rcd] [-gcgd niter alpha_rate] [-tctd niter beta_weight delta_weight] [-bp percentage]" << endl;
+		cout << "Usage: " << argv[0] << " file_path [-rcd] [-gcgd niter alpha_rate] [-tctd niter beta_weight delta_weight] [-ma population beta] [-bp percentage]" << endl;
 		cout << "Initial solution:" << endl;
 		cout << "  -r    Random initial solution." << endl;
 		cout << "  -c    Constructive2 method for initial solution." << endl;
@@ -917,6 +918,10 @@ int main(int argc, char *argv[]) {
 		cout << "  niter Number of iterations needed to make tabu constructions." << endl; 
 		cout << "  beta_weight Weight to give to the frequency of an element in the solution." << endl;
 		cout << "  delta_weight Weight to give to the quality of an element in the solution" << endl;
+		cout << endl;
+		cout << "  -ma   Memetic algorithm" << endl;
+		cout << "  population Population size." << endl; 
+		cout << "  beta Weight to rank a population element." << endl;
 		cout << endl;
 		cout << "Local search:" << endl;	
 		cout << "  -b    Best first local search." << endl;
@@ -976,7 +981,12 @@ int main(int argc, char *argv[]) {
 		metah = true;
 	}
 	else if ((string)argv[2] == "-ma"){
-		mdp.opposition_based_memetic_algorithm(5, 0.6, 1, 0);
+		if ((string)argv[5] == "-b") {
+			mdp.opposition_based_memetic_algorithm(atoi(argv[3]), atof(argv[4]), 1, 0);
+		}
+		else if ((string)argv[5] == "-p") {
+			mdp.opposition_based_memetic_algorithm(atoi(argv[3]), atof(argv[4]), 2, atoi(argv[6]));
+		}
 		metah = true;
 	}
 	if ((string)argv[3] == "-b" && !metah) {
