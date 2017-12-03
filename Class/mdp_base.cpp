@@ -108,9 +108,24 @@ public:
 		return distance;
 	}
 
+	// Method to calculate the distance between a trial solution x and a set of solutions ref_set.
+	int distance_sol(vector<int> &trial, vector<int> &ref_set, vector< vector<int> > &poblacion){
+		int count = 0;
+		for (int i = 0; i < rows; i++) {
+			if (trial[i] == 1) {
+				for (int j = 0; j < (int)ref_set.size(); j++) {
+					if (ref_set[j] == 1) {
+						count += poblacion[j][i];
+					}
+				}
+			}
+		}
+		return -count;
+	}
+
 
 	// Method to calculate the value of a solution
-	double sol_value(vector<int> & sol){
+	double sol_value(vector<int> &sol){
 		double value = 0;
 		for(int i = 0; i < rows-1; i++){
 			if(sol[i] == 1){
@@ -266,7 +281,7 @@ public:
 		int selected = rows;
 		double max_distance, min_distance, aux_distance;
 		vector<int> RCL;
-		srand(time(NULL));
+		srand(time(NULL) + rand());
 		int random;
 
 		best_sol = search_space;
@@ -438,7 +453,6 @@ public:
 			max_distance = INT_MIN;
 			min_distance = INT_MAX;
 			min_index = -1;
-
 			while (selected > m_set) {
 				max_distance = INT_MIN;
 				min_distance = INT_MAX;
@@ -506,6 +520,58 @@ public:
 		best_sol = star_sol;
 		current_sol = best_sol;
 		current_value = best_value;	
+	}
+
+	void combination_D2(vector<int> &sol_1, vector<int> &sol_2){
+		int selected = 0, min_index;
+		double min_dist, aux;
+		vector<int> union_sol;
+
+		for (int i = 0; i < rows; i++) {
+			if (sol_1[i] == 1 || sol_2[i] == 1) {
+				union_sol.push_back(1);
+				selected++;
+			}
+			else {
+				union_sol.push_back(0);	
+			}
+		}
+
+		for (int j = 0; j < rows; j++) {
+			if (union_sol[j] == 1) {
+				printf("%d ",j);
+			}
+		}
+		cout << endl;
+
+		while(selected > m_set){
+			min_dist = INT_MAX;
+			min_index = -1;
+			for(int i = 0; i < rows; i++){
+				if (union_sol[i] == 1) {
+					aux = distance_X(i, union_sol);
+				}
+				else {
+					aux = INT_MAX; 
+				}
+				if(aux < min_dist) {
+					min_index = i;
+					min_dist = aux;
+				}
+			}
+			union_sol[min_index] = 0;
+			selected--;
+		}
+		for (int j = 0; j < rows; j++) {
+			if (union_sol[j] == 1) {
+				printf("%d ",j);
+			}
+		}
+		cout << " ------ " << sol_value(union_sol) << endl;
+		best_sol = union_sol;
+		best_value = sol_value(union_sol);
+		current_sol = best_sol;
+		current_value = best_value;
 	}
 
 	// Method to get a random initial solution.
@@ -615,6 +681,7 @@ public:
 				construction_GR_C2(alpha);
 			}
 			else {
+				cout << "Nueva solucion" << endl;
 				construction_GR_D2(alpha); 
 			}
 			local_search(flavor, percent);
@@ -653,6 +720,187 @@ public:
 		else {
 			construction_TABU_D2(niter, beta_rate, delta_rate, flavor, percent); 
 		}
+	}
+
+	void Scatter_Search(int n, int b, int q){
+		vector< vector<int> > poblacion, combination_set;
+		vector<int> ref_set, aux_indexes;
+		vector<double> aux_values;
+		int ref_set_members, quality_members, min_sol_index, max_sol_index, updates = -1;; 
+		double min_sol_value, max_sol_value, aux_value;
+
+		for (int i = 0; i < n; i++) {
+			construction_GR_D2(0.5);
+			local_search(1,0);
+			poblacion.push_back(best_sol);
+		} 
+		cout << "--------- Mejorado -----------------" << endl;	
+		for (int i = 0; i < n; i++) {
+			for (int j = 0; j < rows; j++) {
+				if (poblacion[i][j] == 1) {
+					printf("%d ",j);
+				}
+			} 
+			cout << " -------- " << sol_value(poblacion[i]) << endl;
+		}
+
+		cout << "Tamanio poblacion: " << poblacion.size() << endl;
+
+		// Seleccion de q% de b miembros del conjunto de referencia por calidad. 
+		ref_set.resize(n);
+		for(int i = 0; i < n; i++){
+			ref_set[i] = 0;
+		}	
+		//ref_set_members = ceil(n * (b / 100.0));
+		quality_members = ceil(b * (q / 100.0));
+		//cout << "Tamanio ref_set: " << ref_set_members << endl;
+		cout << "Tamanio ref_set: " << b << endl;
+		cout << "Calidad:" << quality_members << endl;
+		aux_indexes.resize(quality_members);
+		aux_values.resize(quality_members);
+		min_sol_index = 0;
+		min_sol_value = INT_MAX;
+		for(int i = 0; i < quality_members; i++){
+			ref_set[i] = 1;
+			aux_indexes[i] = i;
+			aux_values[i] = sol_value(poblacion[i]);
+			if (aux_values[i] < min_sol_value) {
+				min_sol_value = aux_values[i];
+				min_sol_index = i;
+			}
+		}
+		cout << "Min index: " << min_sol_index << endl;
+		cout << "Min value: " << min_sol_value << endl;
+		for (int i = quality_members; i < n; i++) {
+			aux_value = sol_value(poblacion[i]);
+			if (aux_value > min_sol_value) {
+				cout << "i: " << i << endl;
+				cout << "Min index: " << min_sol_index << endl;
+				ref_set[aux_indexes[min_sol_index]] = 0;
+				ref_set[i] = 1;
+				aux_indexes[min_sol_index] = i;
+				aux_values[min_sol_index] = aux_value;
+				min_sol_value = INT_MAX;
+				cout << "Calculando minino ---------" << endl;
+				for (int j = 0; j < quality_members; j++) {
+					cout << "Valor auxiliar " << aux_values[j] << endl;
+					if (aux_values[j] < min_sol_value) {
+						min_sol_value = aux_values[j];
+						min_sol_index = j;
+					}
+				}
+				cout << min_sol_value << endl;
+				cout << min_sol_index << endl;
+				cout << "Nuevo min index: " << min_sol_index << endl;	
+			}
+		}
+		for (int k = 0; k < n; k++) {
+			if (ref_set[k] == 1) {
+				cout << k << " ";
+			}
+		}
+		cout << endl;
+
+		// Seleccion de b-quality_members miembros del conjunto de referencia por diversidad.
+		while (quality_members < b) {
+			cout << "While" << endl;
+			cout << "miembros: " << quality_members << endl;
+			max_sol_value = INT_MIN;
+			max_sol_index = -1;
+			for (int i = 0; i < n; i++) {
+				if (ref_set[i] == 0) {
+					cout << "Considerando solucion: " << i << endl; 
+					aux_value = distance_sol(poblacion[i], ref_set, poblacion);
+					cout << "Distancia: " << aux_value << endl;
+					if (aux_value > max_sol_value) {
+						max_sol_value = aux_value;
+						max_sol_index = i;
+					}
+				}
+			}
+			cout << "Solucion mas diversa: " << max_sol_index << endl;
+			ref_set[max_sol_index] = 1;
+			aux_indexes.push_back(max_sol_index);
+			aux_values.push_back(sol_value(poblacion[max_sol_index]));
+			quality_members++;
+		}
+
+		for (int i = 0; i < quality_members; i++) {
+			cout << aux_indexes[i] << " " << aux_values[i] << endl;
+		}
+		
+		for (int k = 0; k < n; k++) {
+			if (ref_set[k] == 1) {
+				cout << k << " ";
+			}
+		}
+		cout << endl;
+		while(updates != 0) {
+			updates = 0;
+			for (int i = 0; i < n; i++) {
+				if (ref_set[i] == 1) {
+					for (int j = i + 1; j < n; j++) {
+						if (ref_set[j] == 1) {
+							//Combinacion
+							cout << "Combinacion " << i << " " << j << endl;
+							combination_D2(poblacion[i],poblacion[j]);
+							//Mejoramiento
+							local_search(1,0);
+							for (int k = 0; k < rows; k++) {
+								if (best_sol[k] == 1) {
+									printf("%d ",k);
+								}
+							}
+							cout << " -------- " << sol_value(best_sol) << endl;
+							combination_set.push_back(best_sol);
+						}
+					}
+				}
+			}
+			//Actualizacion
+			cout << "--------- Comenzando actulizacion ---------------" << endl;
+			for (int k = 0; k < (int)combination_set.size(); k++) {
+				min_sol_value = INT_MAX;
+				min_sol_index = -1;
+				for (int l = 0; l < b; l++){
+					if (aux_values[l] < min_sol_value) {
+						min_sol_value = aux_values[l];
+						min_sol_index = l;
+					}
+				}
+				cout << "Minimo: " << aux_indexes[min_sol_index] << " --- " << min_sol_value << endl; 
+				aux_value = sol_value(combination_set[k]);
+				if (aux_value > min_sol_value) {
+					aux_values[min_sol_index] = aux_value;
+					poblacion[aux_indexes[min_sol_index]] = combination_set[k];
+					updates++;
+				}
+			}
+
+			cout << "--------- poblacion actualizada ---------------" << endl;
+			for (int i = 0; i < n; i++) {
+				for (int j = 0; j < rows; j++) {
+					if (poblacion[i][j] == 1) {
+						printf("%d ",j);
+					}
+				} 
+				cout << " -------- " << sol_value(poblacion[i]) << endl;
+			}
+
+			cout << "---------- updates ------------- " << updates << endl;
+		}
+
+		for (int k = 0; k < b; k++) {
+			max_sol_value = INT_MIN;
+			max_sol_index = -1;
+			if (aux_values[k] > max_sol_value) {
+				max_sol_value = aux_values[k];
+				max_sol_index = k;
+			}
+		}
+
+		best_sol = poblacion[aux_indexes[max_sol_index]];
+		best_value = max_sol_value;
 	}
 
 	vector<int> generate_opposite_solution(vector<int> S){
@@ -708,7 +956,6 @@ public:
 
 	vector<vector<int> > opposition_based_pool_initialize(int p, int flavor, int percent){
 		int count = 0;
-		
 		vector<vector<int> > population;
 		int S_val, Sc_val;
 		vector<vector<int> >::iterator it;
@@ -897,7 +1144,7 @@ public:
 	}
 
 };
-
+ 
 int main(int argc, char *argv[]) {
 	if (argc < 4 || (((string)argv[3] == "-p") && argc < 5)) {
 		cout << "Usage: " << argv[0] << " file_path [-rcd] [-gcgd niter alpha_rate] [-tctd niter beta_weight delta_weight] [-ma population beta] [-bp percentage]" << endl;
@@ -922,6 +1169,11 @@ int main(int argc, char *argv[]) {
 		cout << "  -ma   Memetic algorithm" << endl;
 		cout << "  population Population size." << endl; 
 		cout << "  beta Weight to rank a population element." << endl;
+		cout << endl;
+		cout << "  -ss   Scatter search." << endl;
+		cout << "  n 	 Size of the initial population." << endl;
+		cout << "  b 	 Size of the reference set." << endl;
+		cout << "  q 	 Percentage of members of reference set chosen by quality." << endl;
 		cout << endl;
 		cout << "Local search:" << endl;	
 		cout << "  -b    Best first local search." << endl;
@@ -978,6 +1230,10 @@ int main(int argc, char *argv[]) {
 		else if ((string)argv[6] == "-p") {
 			mdp.TABU(1, atoi(argv[3]), atof(argv[4]), atof(argv[5]), 2, atoi(argv[7]));
 		}
+		metah = true;
+	}
+	else if ((string)argv[2] == "-ss") {
+		mdp.Scatter_Search(atoi(argv[3]),atoi(argv[4]),atoi(argv[5]));
 		metah = true;
 	}
 	else if ((string)argv[2] == "-ma"){
