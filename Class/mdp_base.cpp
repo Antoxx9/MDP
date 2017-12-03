@@ -572,7 +572,6 @@ public:
 		best_value = sol_value(union_sol);
 		current_sol = best_sol;
 		current_value = best_value;
-
 	}
 
 	// Method to get a random initial solution.
@@ -795,7 +794,6 @@ public:
 				cout << "Nuevo min index: " << min_sol_index << endl;	
 			}
 		}
-		
 		for (int k = 0; k < n; k++) {
 			if (ref_set[k] == 1) {
 				cout << k << " ";
@@ -902,8 +900,248 @@ public:
 		}
 
 		best_sol = poblacion[aux_indexes[max_sol_index]];
-		best_value = max_sol_value;		
+		best_value = max_sol_value;
 	}
+
+	vector<int> generate_opposite_solution(vector<int> S){
+		srand(time(NULL));
+		vector<int> SC;
+		SC.resize(rows);
+		int count = 0;
+		int random;
+		while(count < m_set){
+			random = rand()%rows;
+			if(S[random] == 0 && SC[random] == 0){
+				SC[random] = 1;
+				count++;
+			}
+		}
+		/*
+		printf("Opposite\n");
+		for(int i = 0; i < rows; i++){
+			if(SC[i] == 1){
+				printf("%d ",i);
+			}
+		}
+		printf("\n");
+		*/
+		return SC;
+	}
+
+	vector<int> generate_random_sol(){
+		vector<int> RS;
+		RS.resize(rows);
+
+		int size = 0;
+		int random;
+		srand(time(NULL)+rand());
+		while(size < m_set){
+			random = rand()%rows;
+			if (RS[random] == 0) {
+				size++;
+				RS[random] = 1;
+			}
+		}
+/*
+		printf("random\n");
+		for(int i = 0; i < rows; i++){
+			if(RS[i] == 1){
+				printf("%d ",i);
+			}
+		}
+		printf("\n");
+		*/
+		return RS;
+	}
+
+	vector<vector<int> > opposition_based_pool_initialize(int p){
+		int count = 0;
+		vector<vector<int> > population;
+		int S_val, Sc_val;
+		vector<vector<int> >::iterator it;
+
+		int mut1, mut2;
+		srand(time(NULL));
+		while(count < p){
+			vector<int> S, Sc, add_s;
+			S = generate_random_sol();
+			Sc = generate_opposite_solution(S);
+			current_sol = S;
+			current_value = sol_value(S);
+			local_search(1, 0);
+			S = best_sol;
+			S_val = best_value;
+
+			current_sol = Sc;
+			current_value = sol_value(Sc);
+			local_search(1,0);
+			Sc = best_sol;
+			Sc_val = best_value;
+
+			if(S_val > Sc_val){
+				add_s = S;
+			}
+			else{
+				add_s = Sc;
+			}
+
+			it = find(population.begin(), population.end(), add_s);
+			if(it == population.end()){
+				population.push_back(add_s);
+			}
+			else{
+				while(it != population.end()){
+					mut1 = rand()%rows;
+					mut2 = rand()%rows;
+					if(add_s[mut1] == 1 && add_s[mut2] == 0){
+						add_s[mut1] = 0;
+						add_s[mut2] = 1;
+					}
+					else if(add_s[mut1] == 0 && add_s[mut2] == 1){
+						add_s[mut1] = 1;
+						add_s[mut2] = 0;
+					}
+					it = find(population.begin(), population.end(), add_s);
+				}
+				population.push_back(add_s);
+			}
+
+			count++;
+		}
+		return population;
+	} 
+
+	int distance_sets(vector<int> S, vector<int> Sc){
+		int distance = 0;
+		for(int i = 0; i < rows; i++){
+			if(S[i] == 1 && Sc[i] == 1){
+				distance++;
+			}
+		}
+		return distance;
+	}
+
+	double distance_population(vector<vector<int> > population, vector<int> S){
+		double distance = 0;
+		for(int i = 0; i < population.size(); i++){
+			if(S != population[i]){
+				distance += distance_sets(S, population[i]);
+			}
+		}
+	}
+
+	void rank_based_pool_update(vector<vector<int> > population, vector<int> S, double beta){
+		int index;
+		population.push_back(S);
+		vector<pair<int,int> > scores;
+		scores.resize(population.size());
+		int max_index = 0;
+		for(int i = 0; i < population.size(); i++){
+			scores[i] = make_pair(i,beta*sol_value(population[i])+(1-beta)*distance_population(population, population[i]));
+			if(i != 0){
+				if(scores[i].second > scores[max_index].second){
+					max_index = i;
+				}
+			}
+		}
+		population.erase(population.begin()+scores[max_index].first);
+	}
+
+	vector<vector<int> > backbone_based_crossover(vector<int> Si, vector<int> Sj){
+		vector<int> aux;
+		vector<int> Sc;
+		vector<vector<int> > childs;
+		aux.resize(rows);
+		int count = 0;
+		for(int i = 0; i < rows; i++){
+			if(Si[i] == 1 && Sj[i] == 1){
+				aux[i] = 1;
+				count++;
+				
+			}
+		}
+		int max_index_Si = -1, max_index_Sj = -1;
+		double max_distance_Si = -1, max_distance_Sj = -1;
+		while(count < m_set){
+			for(int i =0; i < rows; i++){
+				if(Si[i] == 1 && aux[i] == 0){
+					if(distance_X(i, aux) > max_distance_Si){
+						max_distance_Si = distance_X(i, aux);
+						max_index_Si = i;
+					}
+				}
+				if(Sj[i] == 1 && aux[i] == 0){
+					if(distance_X(i, aux) > max_distance_Sj){
+						max_distance_Sj = distance_X(i, aux);
+						max_index_Sj = i;
+					}
+				}
+			}
+			aux[max_index_Si] = 1;
+			count+=1;
+			if(count < m_set){
+				aux[max_index_Sj] = 1;
+				count+=1;
+			}
+		}
+		Sc = generate_opposite_solution(aux);
+		childs.push_back(aux);
+		childs.push_back(Sc);
+		return childs;
+	}
+
+	void opposition_based_memetic_algorithm(int p, double beta, int flavor, int percent){
+		int no_better = 0;
+
+		vector<int> S, Sc;
+		vector<vector<int> > childs;
+		vector<vector<int> > population = opposition_based_pool_initialize(p);
+		double star_value = 0;
+		vector<int> star_sol;
+		int ni,nj;
+		srand(time(NULL));
+		for(int i = 0; i < p; i ++){
+			if(sol_value(population[i]) > star_value){
+				star_value = sol_value(population[i]);
+				star_sol = population[i];
+			}
+		}
+		while(no_better < 100){
+			ni = rand()%population.size();
+			nj = rand()%population.size();
+			while(ni == nj){
+				nj = rand()%population.size();				
+			}
+			childs = backbone_based_crossover(population[ni], population[nj]);
+			S = childs[0];
+			Sc = childs[1];
+			current_sol = S;
+			current_value = sol_value(S);
+			local_search(flavor, percent);
+			if(best_value > star_value){
+				star_value = best_value;
+				star_sol = best_sol;
+				no_better = 0;
+			}
+			else{
+				no_better++;
+			}
+			S = best_sol;
+			rank_based_pool_update(population,S, beta);
+			current_sol = Sc;
+			current_value = sol_value(Sc);
+			local_search(flavor, percent);
+			if(best_value > star_value){
+				star_value = best_value;
+				star_sol = best_sol;
+			}
+			Sc = best_sol;
+			rank_based_pool_update(population,Sc, beta);
+		}
+		best_sol = star_sol;
+		best_value = star_value;
+	}
+
 };
  
 int main(int argc, char *argv[]) {
@@ -928,7 +1166,10 @@ int main(int argc, char *argv[]) {
 		cout << "  delta_weight Weight to give to the quality of an element in the solution" << endl;
 		cout << endl;
 		cout << "  -ss   Scatter search." << endl;
-		cout << "  n 	 Size of the initial population." << endl; 
+		cout << "  n 	 Size of the initial population." << endl;
+		cout << "  b 	 Size of the reference set." << endl;
+		cout << "  q 	 Percentage of members of reference set chosen by quality." << endl;
+		cout << endl;
 		cout << "Local search:" << endl;	
 		cout << "  -b    Best first local search." << endl;
 		cout << "  -p    Percentage of neighborhood local search." << endl;
@@ -988,6 +1229,10 @@ int main(int argc, char *argv[]) {
 	}
 	else if ((string)argv[2] == "-ss") {
 		mdp.Scatter_Search(atoi(argv[3]),atoi(argv[4]),atoi(argv[5]));
+		metah = true;
+	}
+	else if ((string)argv[2] == "-ma"){
+		mdp.opposition_based_memetic_algorithm(5, 0.6, 1, 0);
 		metah = true;
 	}
 	if ((string)argv[3] == "-b" && !metah) {
